@@ -1,32 +1,15 @@
-# Создать образ на основе базового слоя,
-# который содержит файлы ОС и интерпретатор Python 3.12.
-FROM python:3.12
+    FROM python:3.12
 
-# Переходим в образе в директорию /app: в ней будем хранить код проекта.
-# Если директории с указанным именем нет, она будет создана. 
-# Название директории может быть любым.
-WORKDIR /app
-# Дальнейшие инструкции будут выполняться в директории /app
+    RUN apt-get update && apt-get install -y dos2unix build-essential libpq-dev libjpeg-dev zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
-#Установка GUNICORN
-RUN pip install gunicorn==23.0.0
+    WORKDIR /app
 
-# Скопировать с локального компьютера файл зависимостей
-# в текущую директорию (текущая директория — это /app).
-COPY requirements.txt .
+    RUN pip install gunicorn==23.0.0
 
+    COPY requirements.txt .
+    RUN dos2unix requirements.txt
+    RUN pip install -r requirements.txt --no-cache-dir
 
-# Обновляем pip и устанавливаем setuptools для совместимости с Python 3.12.
-# Это нужно сделать до установки зависимостей.
-RUN pip install --upgrade pip setuptools
+    COPY . .
 
-# Выполнить в текущей директории команду терминала
-# для установки зависимостей.
-RUN pip install -r requirements.txt --no-cache-dir
-
-# Скопировать всё необходимое содержимое 
-# той директории локального компьютера, где сохранён Dockerfile,
-# в текущую рабочую директорию образа — /app.
-COPY . .
-
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi"] 
+    CMD ["gunicorn", "backend.wsgi:application", "--bind", "0:8000"]
